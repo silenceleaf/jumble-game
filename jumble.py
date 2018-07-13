@@ -90,5 +90,4 @@ def mask_string(string, mask):
 
 if __name__ == '__main__':
     main()
-    # bfs([["1", "2"], ["3", "4"], ["5", "6"]])
 
