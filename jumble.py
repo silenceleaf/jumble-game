@@ -29,22 +29,42 @@ def jumble(dict_json, jumbles, answer_blank):
     candidate_letter_set = sc.parallelize([""])
     dict_rdd = sc.parallelize(word_list)
     for pair in jumbles:
+        # generate the permutation of given letters, store it into RDD
         permutation_rdd = sc.parallelize([''.join(p) for p in permutations(pair[0].lower())])
-        valid_rdd = dict_rdd.intersection(permutation_rdd)
+        # permutation RDD intersect with dict RDD, result is valid guess of this Jumble
+        valid_rdd = dict_rdd.intersection(permutation_rdd).persist()
         print("input word: " + pair[0] + "; valid filling: " + ' '.join(valid_rdd.collect()))
-        mask_rdd = valid_rdd.map(lambda x: mask_string(x, pair[1]))
-        candidate_letter_set = candidate_letter_set.cartesian(sc.parallelize(mask_rdd.collect()))
+        # mask the word: "STASH" + "10011" => "SSH"
+        mask_rdd = valid_rdd.map(lambda x: mask_string(x, pair[1])).persist()
+        # since each letters input might have multiple valid guess, cartesian combination generating the result set
+        candidate_letter_set = candidate_letter_set.cartesian(mask_rdd)
         candidate_letter_set = sc.parallelize(candidate_letter_set.map(lambda x: x[0] + x[1]).collect())
 
-    candidate_letter_list = candidate_letter_set.map(lambda x: ''.join(sorted(x))).distinct().collect()
+    # till here, candidate_letter_set looks like below
+    # 0 = {str} 'sshroeindcia'
+    # 1 = {str} 'sshroeindiac'
+    # 2 = {str} 'sshroeindcia'
+    # 3 = {str} 'sshroeindiac'
+    print()
 
-    result_list = sc.parallelize(candidate_letter_list).flatMap(lambda x: bfs(x, answer_blank, dict_json)).distinct().collect()
+    # sort the letters and remove duplicate, the call BFS method give all possible answer(base on answer letter format)
+    result_list = candidate_letter_set \
+        .map(lambda x: ''.join(sorted(x))) \
+        .distinct()\
+        .persist()\
+        .flatMap(lambda x: bfs(x, answer_blank, dict_json)) \
+        .distinct() \
+        .collect()
 
     print()
     for result in result_list:
         print(*result, sep=' ')
 
 
+# this method using BFS search give a possible answer list
+# for example: "sshroeindiac" + [4, 8]=> "rash" "decision" ... ...
+# frequency_sum_limit (defined at top) is to avoid letter combination is too strange
+# for example: "rash"(frequency: 0), "decision"(frequency: 1124). The sum is 1124 less than limit, it is a valid guess
 def bfs(string, answer_blank, dict_json):
     queue = Queue()
     result_list = list()
