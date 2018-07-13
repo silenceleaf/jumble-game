@@ -40,14 +40,14 @@ def jumble(dict_json, jumbles, answer_blank):
         candidate_letter_set = candidate_letter_set.cartesian(mask_rdd)
         candidate_letter_set = sc.parallelize(candidate_letter_set.map(lambda x: x[0] + x[1]).collect())
 
-    # till here, candidate_letter_set looks like below
+    # till here, candidate_letter_set looks like below, each is possible letter series
     # 0 = {str} 'sshroeindcia'
     # 1 = {str} 'sshroeindiac'
     # 2 = {str} 'sshroeindcia'
     # 3 = {str} 'sshroeindiac'
     print()
 
-    # sort the letters and remove duplicate, the call BFS method give all possible answer(base on answer letter format)
+    # sort the letters and remove duplicate, then call BFS method give all possible answer(base on answer letter format)
     result_list = candidate_letter_set \
         .map(lambda x: ''.join(sorted(x))) \
         .distinct()\
@@ -63,7 +63,7 @@ def jumble(dict_json, jumbles, answer_blank):
 
 # this method using BFS search give a possible answer list
 # for example: "sshroeindiac" + [4, 8]=> "rash" "decision" ... ...
-# frequency_sum_limit (defined at top) is to avoid letter combination is too strange
+# frequency_sum_limit (defined at top) is to avoid letter combination is too strange(frequency rank to high)
 # for example: "rash"(frequency: 0), "decision"(frequency: 1124). The sum is 1124 less than limit, it is a valid guess
 def bfs(string, answer_blank, dict_json):
     queue = Queue()
